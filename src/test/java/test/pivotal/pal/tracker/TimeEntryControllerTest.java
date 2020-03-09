@@ -25,7 +25,7 @@ public class TimeEntryControllerTest {
     private TimeEntryController controller;
 
     @BeforeEach
-    public void setUp throws Exception() {
+    public void setUp() throws Exception() {
         timeEntryRepository = mock(TimeEntryRepository.class);
         MeterRegistry meterRegistry = mock(MeterRegistry.class);
 
