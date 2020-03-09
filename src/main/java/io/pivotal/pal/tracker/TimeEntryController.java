@@ -10,54 +10,63 @@ import java.util.List;
 @RequestMapping(value= "/time-entries")
 public class TimeEntryController {
 
-        private TimeEntryRepository timeEntriesRepo;
+    private TimeEntryRepository timeEntriesRepo;
+    private final DistributionSummary timeEntrySummary;
+    private final Counter actionCounter;
 
-        public TimeEntryController(TimeEntryRepository timeEntriesRepo) {
-            this.timeEntriesRepo = timeEntriesRepo;
+    public TimeEntryController(
+            TimeEntryRepository timeEntriesRepo,
+            MeterRegistry meterRegistry
+    ) {
+        this.timeEntriesRepo = timeEntriesRepo;
+
+        timeEntrySummary = meterRegistry.summary("timeEntry.summary");
+        actionCounter = meterRegistry.counter("timeEntry.actionCounter");
+    }
+
+    @PostMapping
+    public ResponseEntity<TimeEntry> create(@RequestBody TimeEntry timeEntry) {
+        TimeEntry createdTimeEntry = timeEntriesRepo.create(timeEntry);
+        actionCounter.increment();
+        timeEntrySummary.record(timeEntriesRepo.list().size());
+
+        return new ResponseEntity<>(createdTimeEntry, HttpStatus.CREATED);
+    }
+
+    @GetMapping("{id}")
+    public ResponseEntity<TimeEntry> read(@PathVariable Long id) {
+        TimeEntry timeEntry = timeEntriesRepo.find(id);
+        if (timeEntry != null) {
+            actionCounter.increment();
+            return new ResponseEntity<>(timeEntry, HttpStatus.OK);
+        } else {
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }
+    }
 
-        // Create
-        @PostMapping
-        public ResponseEntity<TimeEntry> create(@RequestBody TimeEntry timeEntry) {
-            TimeEntry createdTimeEntry = timeEntriesRepo.create(timeEntry);
+    @GetMapping
+    public ResponseEntity<List<TimeEntry>> list() {
+        actionCounter.increment();
+        return new ResponseEntity<>(timeEntriesRepo.list(), HttpStatus.OK);
+    }
 
-            // Returning a ResponseEntity allows us to control the resulting HTTP status code
-            return new ResponseEntity<>(createdTimeEntry, HttpStatus.CREATED);
+    @PutMapping("{id}")
+    public ResponseEntity<TimeEntry> update(@PathVariable Long id, @RequestBody TimeEntry timeEntry) {
+        TimeEntry updatedTimeEntry = timeEntriesRepo.update(id, timeEntry);
+        if (updatedTimeEntry != null) {
+            actionCounter.increment();
+            return new ResponseEntity<>(updatedTimeEntry, HttpStatus.OK);
+        } else {
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }
+    }
 
-        // Retrieve a single record
-        @GetMapping("{id}")
-        public ResponseEntity<TimeEntry> read(@PathVariable Long id) {
-            TimeEntry timeEntry = timeEntriesRepo.find(id);
-            if (timeEntry != null) {
-                return new ResponseEntity<>(timeEntry, HttpStatus.OK);
-            } else {
-                return new ResponseEntity<>(HttpStatus.NOT_FOUND);
-            }
-        }
+    @DeleteMapping("{id}")
+    public ResponseEntity delete(@PathVariable Long id) {
+        timeEntriesRepo.delete(id);
+        actionCounter.increment();
+        timeEntrySummary.record(timeEntriesRepo.list().size());
 
-        // Retrieve all records
-        @GetMapping
-        public ResponseEntity<List<TimeEntry>> list() {
-            return new ResponseEntity<>(timeEntriesRepo.list(), HttpStatus.OK);
-        }
-
-        // Update
-        @PutMapping("{id}")
-        public ResponseEntity<TimeEntry> update(@PathVariable Long id, @RequestBody TimeEntry timeEntry) {
-            TimeEntry updatedTimeEntry = timeEntriesRepo.update(id, timeEntry);
-            if (updatedTimeEntry != null) {
-                return new ResponseEntity<>(updatedTimeEntry, HttpStatus.OK);
-            } else {
-                return new ResponseEntity<>(HttpStatus.NOT_FOUND);
-            }
-        }
-
-        // Delete
-        @DeleteMapping("{id}")
-        public ResponseEntity<TimeEntry> delete(@PathVariable Long id) {
-            timeEntriesRepo.delete(id);
-
-            return new ResponseEntity<>(HttpStatus.NO_CONTENT);
-        }
+        return new ResponseEntity(HttpStatus.NO_CONTENT);
+    }
 }
