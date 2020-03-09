@@ -9,6 +9,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.springframework.http.converter.json.Jackson2ObjectMapperBuilder;
+import javax.sql.DataSource;
 
 @SpringBootApplication
 public class PalTrackerApplication {
@@ -18,8 +19,9 @@ public class PalTrackerApplication {
     }
 
     @Bean
-    TimeEntryRepository timeEntryRepository(){
-        return new InMemoryTimeEntryRepository();
+    TimeEntryRepository  timeEntryRepository (DataSource dataSource) {
+        // instantiate and configure TimeEntryRepository obj
+        return new  JdbcTimeEntryRepository(dataSource);
     }
 
     @Bean
